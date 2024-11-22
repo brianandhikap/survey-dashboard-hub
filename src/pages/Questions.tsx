@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useToast } from "@/components/ui/use-toast";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Pencil, Trash2 } from "lucide-react";
-import { pool } from "@/lib/db";
+import { fetchQuestions, addQuestion, updateQuestion, deleteQuestion } from "@/services/api";
 
 interface Question {
   id: number;
@@ -21,25 +21,17 @@ const Questions = () => {
 
   const { data: questions = [], isLoading } = useQuery({
     queryKey: ["questions"],
-    queryFn: async () => {
-      const [rows] = await pool.query('SELECT * FROM questions');
-      return rows as Question[];
-    }
+    queryFn: fetchQuestions
   });
 
   const addQuestionMutation = useMutation({
-    mutationFn: async (questionText: string) => {
-      await pool.query(
-        'INSERT INTO questions (question_text) VALUES (?)',
-        [questionText]
-      );
-    },
+    mutationFn: (questionText: string) => addQuestion(questionText),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["questions"] });
       toast({ title: "Success", description: "Question added successfully" });
       setNewQuestion("");
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       toast({
         variant: "destructive",
         title: "Error",
@@ -49,19 +41,14 @@ const Questions = () => {
   });
 
   const updateQuestionMutation = useMutation({
-    mutationFn: async (question: Question) => {
-      await pool.query(
-        'UPDATE questions SET question_text = ? WHERE id = ?',
-        [question.question_text, question.id]
-      );
-    },
+    mutationFn: (question: Question) => updateQuestion(question),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["questions"] });
       toast({ title: "Success", description: "Question updated successfully" });
       setEditingQuestion(null);
       setNewQuestion("");
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       toast({
         variant: "destructive",
         title: "Error",
@@ -71,14 +58,12 @@ const Questions = () => {
   });
 
   const deleteQuestionMutation = useMutation({
-    mutationFn: async (id: number) => {
-      await pool.query('DELETE FROM questions WHERE id = ?', [id]);
-    },
+    mutationFn: (id: number) => deleteQuestion(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["questions"] });
       toast({ title: "Success", description: "Question deleted successfully" });
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       toast({
         variant: "destructive",
         title: "Error",
@@ -95,7 +80,7 @@ const Questions = () => {
   const handleUpdateQuestion = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingQuestion) return;
-    
+
     updateQuestionMutation.mutate({
       id: editingQuestion.id,
       question_text: newQuestion
@@ -114,7 +99,7 @@ const Questions = () => {
   return (
     <div className="space-y-8">
       <h1 className="text-2xl font-bold">Pertanyaan</h1>
-      
+
       <form onSubmit={editingQuestion ? handleUpdateQuestion : handleAddQuestion} className="space-y-4">
         <Textarea
           placeholder="Masukkan pertanyaan baru"

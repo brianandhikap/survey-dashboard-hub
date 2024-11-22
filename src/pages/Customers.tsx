@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useToast } from "@/components/ui/use-toast";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Pencil, Trash2 } from "lucide-react";
-import { pool } from "@/lib/db";
+import { fetchCustomers, addCustomer, updateCustomer, deleteCustomer } from "@/services/api";
 
 interface Customer {
   id: number;
@@ -23,26 +23,19 @@ const Customers = () => {
 
   const { data: customers = [], isLoading } = useQuery({
     queryKey: ["customers"],
-    queryFn: async () => {
-      const [rows] = await pool.query('SELECT * FROM customers');
-      return rows as Customer[];
-    }
+    queryFn: fetchCustomers
   });
 
   const addCustomerMutation = useMutation({
-    mutationFn: async (newCustomer: { customer_id: string; name: string }) => {
-      await pool.query(
-        'INSERT INTO customers (customer_id, name) VALUES (?, ?)',
-        [newCustomer.customer_id, newCustomer.name]
-      );
-    },
+    mutationFn: (newCustomer: { customer_id: string; name: string }) => 
+      addCustomer(newCustomer),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["customers"] });
       toast({ title: "Success", description: "Customer added successfully" });
       setNewCustomerId("");
       setNewCustomerName("");
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       toast({
         variant: "destructive",
         title: "Error",
@@ -52,12 +45,7 @@ const Customers = () => {
   });
 
   const updateCustomerMutation = useMutation({
-    mutationFn: async (customer: Customer) => {
-      await pool.query(
-        'UPDATE customers SET customer_id = ?, name = ? WHERE id = ?',
-        [customer.customer_id, customer.name, customer.id]
-      );
-    },
+    mutationFn: (customer: Customer) => updateCustomer(customer),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["customers"] });
       toast({ title: "Success", description: "Customer updated successfully" });
@@ -65,7 +53,7 @@ const Customers = () => {
       setNewCustomerId("");
       setNewCustomerName("");
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       toast({
         variant: "destructive",
         title: "Error",
@@ -75,14 +63,12 @@ const Customers = () => {
   });
 
   const deleteCustomerMutation = useMutation({
-    mutationFn: async (id: number) => {
-      await pool.query('DELETE FROM customers WHERE id = ?', [id]);
-    },
+    mutationFn: (id: number) => deleteCustomer(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["customers"] });
       toast({ title: "Success", description: "Customer deleted successfully" });
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       toast({
         variant: "destructive",
         title: "Error",
