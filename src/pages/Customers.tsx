@@ -4,45 +4,42 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/components/ui/use-toast";
-import mysql from "mysql2/promise";
+
+// Mock data interface
+interface Customer {
+  id: number;
+  customer_id: string;
+  name: string;
+}
+
+const mockCustomers: Customer[] = [
+  { id: 1, customer_id: "CUST001", name: "John Doe" },
+  { id: 2, customer_id: "CUST002", name: "Jane Smith" },
+];
 
 const Customers = () => {
   const [newCustomerId, setNewCustomerId] = useState("");
   const [newCustomerName, setNewCustomerName] = useState("");
   const { toast } = useToast();
 
-  const { data: customers, refetch } = useQuery({
+  const { data: customers = mockCustomers, refetch } = useQuery({
     queryKey: ["customers"],
     queryFn: async () => {
-      const connection = await mysql.createConnection({
-        host: "localhost",
-        user: "survey",
-        password: "salatiga2024",
-        database: "survey_db"
-      });
-
-      const [rows] = await connection.execute("SELECT * FROM customers");
-      await connection.end();
-      return rows;
+      // In a real application, this would be an API call
+      return mockCustomers;
     }
   });
 
   const handleAddCustomer = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const connection = await mysql.createConnection({
-        host: "localhost",
-        user: "survey",
-        password: "salatiga2024",
-        database: "survey_db"
+      // In a real application, this would be an API call
+      mockCustomers.push({
+        id: mockCustomers.length + 1,
+        customer_id: newCustomerId,
+        name: newCustomerName
       });
 
-      await connection.execute(
-        "INSERT INTO customers (customer_id, name) VALUES (?, ?)",
-        [newCustomerId, newCustomerName]
-      );
-
-      await connection.end();
       setNewCustomerId("");
       setNewCustomerName("");
       refetch();
@@ -87,7 +84,7 @@ const Customers = () => {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {customers?.map((customer: any) => (
+          {customers.map((customer) => (
             <TableRow key={customer.id}>
               <TableCell>{customer.customer_id}</TableCell>
               <TableCell>{customer.name}</TableCell>

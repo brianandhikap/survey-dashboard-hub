@@ -4,44 +4,39 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/components/ui/use-toast";
-import mysql from "mysql2/promise";
+
+// Mock data interface
+interface Question {
+  id: number;
+  question_text: string;
+}
+
+const mockQuestions: Question[] = [
+  { id: 1, question_text: "How satisfied are you with our service?" },
+  { id: 2, question_text: "Would you recommend us to others?" },
+];
 
 const Questions = () => {
   const [newQuestion, setNewQuestion] = useState("");
   const { toast } = useToast();
 
-  const { data: questions, refetch } = useQuery({
+  const { data: questions = mockQuestions, refetch } = useQuery({
     queryKey: ["questions"],
     queryFn: async () => {
-      const connection = await mysql.createConnection({
-        host: "localhost",
-        user: "survey",
-        password: "salatiga2024",
-        database: "survey_db"
-      });
-
-      const [rows] = await connection.execute("SELECT * FROM questions");
-      await connection.end();
-      return rows;
+      // In a real application, this would be an API call
+      return mockQuestions;
     }
   });
 
   const handleAddQuestion = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const connection = await mysql.createConnection({
-        host: "localhost",
-        user: "survey",
-        password: "salatiga2024",
-        database: "survey_db"
+      // In a real application, this would be an API call
+      mockQuestions.push({
+        id: mockQuestions.length + 1,
+        question_text: newQuestion
       });
 
-      await connection.execute(
-        "INSERT INTO questions (question_text) VALUES (?)",
-        [newQuestion]
-      );
-
-      await connection.end();
       setNewQuestion("");
       refetch();
       toast({
@@ -77,7 +72,7 @@ const Questions = () => {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {questions?.map((question: any) => (
+          {questions.map((question) => (
             <TableRow key={question.id}>
               <TableCell>{question.question_text}</TableCell>
             </TableRow>

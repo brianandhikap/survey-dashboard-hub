@@ -1,29 +1,25 @@
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import mysql from "mysql2/promise";
+
+// Mock data interface
+interface Answer {
+  question_text: string;
+  count: number;
+  answer: string;
+}
+
+const mockAnswers: Answer[] = [
+  { question_text: "How satisfied are you with our service?", count: 5, answer: "Very Satisfied" },
+  { question_text: "Would you recommend us to others?", count: 8, answer: "Yes" },
+];
 
 const Dashboard = () => {
-  const { data: answers, isLoading } = useQuery({
+  const { data: answers = mockAnswers, isLoading } = useQuery({
     queryKey: ["answers"],
     queryFn: async () => {
-      const connection = await mysql.createConnection({
-        host: "localhost",
-        user: "survey",
-        password: "salatiga2024",
-        database: "survey_db"
-      });
-
-      const [rows] = await connection.execute(
-        `SELECT q.question_text, COUNT(a.answer) as count, a.answer
-         FROM questions q
-         LEFT JOIN answers a ON q.id = a.question_id
-         GROUP BY q.id, a.answer
-         ORDER BY q.id, a.answer`
-      );
-
-      await connection.end();
-      return rows;
+      // In a real application, this would be an API call
+      return mockAnswers;
     }
   });
 
@@ -33,7 +29,7 @@ const Dashboard = () => {
     <div className="space-y-8">
       <h1 className="text-2xl font-bold">Dashboard Survey</h1>
       <div className="grid gap-8">
-        {answers?.map((question: any, index: number) => (
+        {answers.map((question, index) => (
           <Card key={index}>
             <CardHeader>
               <CardTitle>{question.question_text}</CardTitle>
