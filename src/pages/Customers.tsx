@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/components/ui/use-toast";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Pencil, Trash2 } from "lucide-react";
+import { pool } from "@/lib/db";
 
 interface Customer {
   id: number;
@@ -13,85 +14,97 @@ interface Customer {
   name: string;
 }
 
-const mockCustomers: Customer[] = [
-  { id: 1, customer_id: "CUST001", name: "John Doe" },
-  { id: 2, customer_id: "CUST002", name: "Jane Smith" },
-];
-
 const Customers = () => {
   const [newCustomerId, setNewCustomerId] = useState("");
   const [newCustomerName, setNewCustomerName] = useState("");
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
-  const { data: customers = mockCustomers, refetch } = useQuery({
+  const { data: customers = [], isLoading } = useQuery({
     queryKey: ["customers"],
-    queryFn: async () => mockCustomers
+    queryFn: async () => {
+      const [rows] = await pool.query('SELECT * FROM customers');
+      return rows as Customer[];
+    }
+  });
+
+  const addCustomerMutation = useMutation({
+    mutationFn: async (newCustomer: { customer_id: string; name: string }) => {
+      await pool.query(
+        'INSERT INTO customers (customer_id, name) VALUES (?, ?)',
+        [newCustomer.customer_id, newCustomer.name]
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["customers"] });
+      toast({ title: "Success", description: "Customer added successfully" });
+      setNewCustomerId("");
+      setNewCustomerName("");
+    },
+    onError: (error) => {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to add customer: " + error.message,
+      });
+    }
+  });
+
+  const updateCustomerMutation = useMutation({
+    mutationFn: async (customer: Customer) => {
+      await pool.query(
+        'UPDATE customers SET customer_id = ?, name = ? WHERE id = ?',
+        [customer.customer_id, customer.name, customer.id]
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["customers"] });
+      toast({ title: "Success", description: "Customer updated successfully" });
+      setEditingCustomer(null);
+      setNewCustomerId("");
+      setNewCustomerName("");
+    },
+    onError: (error) => {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to update customer: " + error.message,
+      });
+    }
+  });
+
+  const deleteCustomerMutation = useMutation({
+    mutationFn: async (id: number) => {
+      await pool.query('DELETE FROM customers WHERE id = ?', [id]);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["customers"] });
+      toast({ title: "Success", description: "Customer deleted successfully" });
+    },
+    onError: (error) => {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to delete customer: " + error.message,
+      });
+    }
   });
 
   const handleAddCustomer = async (e: React.FormEvent) => {
     e.preventDefault();
-    try {
-      mockCustomers.push({
-        id: mockCustomers.length + 1,
-        customer_id: newCustomerId,
-        name: newCustomerName
-      });
-
-      setNewCustomerId("");
-      setNewCustomerName("");
-      refetch();
-      toast({
-        title: "Success",
-        description: "Customer added successfully",
-      });
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to add customer",
-      });
-    }
+    addCustomerMutation.mutate({ customer_id: newCustomerId, name: newCustomerName });
   };
 
-  const handleEditCustomer = (customer: Customer) => {
-    setEditingCustomer(customer);
-    setNewCustomerId(customer.customer_id);
-    setNewCustomerName(customer.name);
-  };
-
-  const handleUpdateCustomer = () => {
+  const handleUpdateCustomer = (e: React.FormEvent) => {
+    e.preventDefault();
     if (!editingCustomer) return;
-
-    const index = mockCustomers.findIndex(c => c.id === editingCustomer.id);
-    if (index !== -1) {
-      mockCustomers[index] = {
-        ...editingCustomer,
-        customer_id: newCustomerId,
-        name: newCustomerName
-      };
-      
-      setEditingCustomer(null);
-      setNewCustomerId("");
-      setNewCustomerName("");
-      refetch();
-      toast({
-        title: "Success",
-        description: "Customer updated successfully",
-      });
-    }
-  };
-
-  const handleDeleteCustomer = (id: number) => {
-    const index = mockCustomers.findIndex(c => c.id === id);
-    if (index !== -1) {
-      mockCustomers.splice(index, 1);
-      refetch();
-      toast({
-        title: "Success",
-        description: "Customer deleted successfully",
-      });
-    }
+    
+    updateCustomerMutation.mutate({
+      id: editingCustomer.id,
+      customer_id: newCustomerId,
+      name: newCustomerName
+    });
   };
 
   return (
@@ -161,7 +174,7 @@ const Customers = () => {
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                       <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction onClick={() => handleDeleteCustomer(customer.id)}>
+                      <AlertDialogAction onClick={() => deleteCustomerMutation.mutate(customer.id)}>
                         Delete
                       </AlertDialogAction>
                     </AlertDialogFooter>

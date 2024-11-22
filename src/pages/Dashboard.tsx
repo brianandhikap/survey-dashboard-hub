@@ -1,25 +1,25 @@
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { pool } from "@/lib/db";
 
-// Mock data interface
 interface Answer {
   question_text: string;
   count: number;
   answer: string;
 }
 
-const mockAnswers: Answer[] = [
-  { question_text: "How satisfied are you with our service?", count: 5, answer: "Very Satisfied" },
-  { question_text: "Would you recommend us to others?", count: 8, answer: "Yes" },
-];
-
 const Dashboard = () => {
-  const { data: answers = mockAnswers, isLoading } = useQuery({
+  const { data: answers = [], isLoading } = useQuery({
     queryKey: ["answers"],
     queryFn: async () => {
-      // In a real application, this would be an API call
-      return mockAnswers;
+      const [rows] = await pool.query(`
+        SELECT q.question_text, COUNT(*) as count, a.answer
+        FROM answers a
+        JOIN questions q ON a.question_id = q.id
+        GROUP BY q.question_text, a.answer
+      `);
+      return rows as Answer[];
     }
   });
 
