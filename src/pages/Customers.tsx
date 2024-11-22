@@ -107,6 +107,12 @@ const Customers = () => {
     });
   };
 
+  const handleEditCustomer = (customer: Customer) => {
+    setEditingCustomer(customer);
+    setNewCustomerId(customer.customer_id);
+    setNewCustomerName(customer.name);
+  };
+
   return (
     <div className="space-y-8">
       <h1 className="text-2xl font-bold">ID Pelanggan</h1>

@@ -102,6 +102,15 @@ const Questions = () => {
     });
   };
 
+  const handleEditQuestion = (question: Question) => {
+    setEditingQuestion(question);
+    setNewQuestion(question.question_text);
+  };
+
+  const handleDeleteQuestion = (id: number) => {
+    deleteQuestionMutation.mutate(id);
+  };
+
   return (
     <div className="space-y-8">
       <h1 className="text-2xl font-bold">Pertanyaan</h1>
