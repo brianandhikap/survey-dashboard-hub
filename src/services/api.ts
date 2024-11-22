@@ -65,3 +65,9 @@ export const deleteQuestion = async (id: number) => {
   });
   if (!response.ok) throw new Error('Failed to delete question');
 };
+
+export const fetchAnswers = async () => {
+  const response = await fetch(`${API_URL}/answers`);
+  if (!response.ok) throw new Error('Failed to fetch answers');
+  return response.json();
+};

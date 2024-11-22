@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { pool } from "@/lib/db";
+import { fetchAnswers } from "@/services/api";
 
 interface Answer {
   question_text: string;
@@ -12,15 +12,7 @@ interface Answer {
 const Dashboard = () => {
   const { data: answers = [], isLoading } = useQuery({
     queryKey: ["answers"],
-    queryFn: async () => {
-      const [rows] = await pool.query(`
-        SELECT q.question_text, COUNT(*) as count, a.answer
-        FROM answers a
-        JOIN questions q ON a.question_id = q.id
-        GROUP BY q.question_text, a.answer
-      `);
-      return rows as Answer[];
-    }
+    queryFn: fetchAnswers
   });
 
   if (isLoading) return <div>Loading...</div>;
